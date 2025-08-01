@@ -1,0 +1,471 @@
+ <!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>grow a garden</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background-color: #111; color: #fff; }
+
+    header {
+      background-color: #1e1e1e;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #00b894;
+    }
+
+    .title { font-size: 24px; font-weight: bold; }
+
+    .auth {
+      display: flex;
+      gap: 10px;
+    }
+
+    .auth input {
+      padding: 6px;
+      border-radius: 4px;
+      border: none;
+    }
+
+    .auth button {
+      padding: 6px 12px;
+      background-color: #00b894;
+      border: none;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .logout {
+      background-color: #d63031;
+    }
+
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      padding: 40px 20px;
+    }
+
+    .item-card {
+      background-color: #222;
+      border: 2px solid #333;
+      border-radius: 10px;
+      width: 280px;
+      padding: 20px;
+      transition: 0.3s;
+    }
+
+    .item-card:hover {
+      border-color: #00b894;
+    }
+
+    .item-card img {
+      width: 100%;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+
+    .item-card h3 { font-size: 20px; margin-bottom: 10px; }
+    .item-card p { font-size: 14px; color: #bbb; margin-bottom: 10px; }
+    .price { color: #00b894; font-weight: bold; font-size: 18px; margin-bottom: 10px; }
+
+    .btn { background-color: #00b894; border: none; padding: 10px; width: 100%; color: white; font-size: 16px; border-radius: 6px; cursor: pointer; margin-bottom: 5px; }
+    .btn:hover { background-color: #019875; }
+
+    .admin-controls { margin-top: 10px; }
+    .admin-controls input { width: 100%; padding: 5px; margin-bottom: 5px; border-radius: 4px; border: none; }
+
+    .cart-toggle {
+      position: fixed; bottom: 20px; right: 20px;
+      background-color: #00b894; border: none; padding: 10px 20px;
+      font-size: 16px; color: white; border-radius: 6px;
+      cursor: pointer; z-index: 1000;
+    }
+
+    .cart {
+      display: none; position: fixed; bottom: 0; left: 0;
+      width: 100%; background-color: #1e1e1e;
+      border-top: 2px solid #00b894; padding: 20px;
+      text-align: center; z-index: 999;
+    }
+
+    .cart-item { margin-bottom: 10px; }
+    .cart button { margin-left: 10px; }
+
+    /* Модальное окно для оплаты */
+    .modal {
+      display: none;
+      position: fixed; 
+      z-index: 2000;
+      left: 0; top: 0; width: 100%; height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.7);
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background-color: #222;
+      padding: 20px;
+      border-radius: 8px;
+      width: 300px;
+      color: #fff;
+    }
+    .modal-content input {
+      width: 100%;
+      padding: 8px;
+      margin: 10px 0;
+      border-radius: 4px;
+      border: none;
+    }
+    .modal-content button {
+      background-color: #00b894;
+      border: none;
+      padding: 10px;
+      width: 100%;
+      color: white;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .modal-content button:hover {
+      background-color: #019875;
+    }
+    .close-btn {
+      background-color: #d63031;
+      margin-top: 10px;
+    }
+
+    /* Блок добавления товара админом */
+    #adminAddItem {
+      max-width: 280px; 
+      margin: 20px auto; 
+      background:#222; 
+      padding:15px; 
+      border-radius:10px;
+      display: none;
+    }
+    #adminAddItem h3 {
+      color: #00b894;
+      margin-bottom: 10px;
+    }
+    #adminAddItem input {
+      width: 100%;
+      margin-bottom: 8px;
+      padding: 6px;
+      border-radius: 4px;
+      border: none;
+      color: #000;
+    }
+    #imagePreview {
+      margin-top: 10px;
+      text-align: center;
+      display: none;
+    }
+    #imagePreview img {
+      max-width: 100%;
+      max-height: 150px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="title">grow a garden shop</div>
+  <div class="auth" id="authPanel">
+    <input type="text" id="username" placeholder="Имя" />
+    <input type="password" id="password" placeholder="Пароль" />
+    <button onclick="login()">Вход</button>
+    <button onclick="register()">Регистрация</button>
+  </div>
+  <div class="auth" id="logoutPanel" style="display:none;">
+    <span id="greeting"></span>
+    <button class="logout" onclick="logout()">Выйти</button>
+  </div>
+</header>
+
+<div class="container" id="itemContainer"></div>
+
+<!-- Блок для добавления товара (виден только админу) -->
+<div id="adminAddItem">
+  <h3>Добавить новый товар</h3>
+  <input type="text" id="newItemName" placeholder="Название товара" />
+  <input type="number" id="newItemPrice" placeholder="Цена" />
+  <input type="number" id="newItemStock" placeholder="Количество на складе" />
+  <input type="text" id="newItemImage" placeholder="URL изображения (например, https://...)" oninput="showPreview()" />
+  <div id="imagePreview">
+    <img src="" alt="Превью изображения" />
+  </div>
+  <button class="btn" onclick="addNewItem()">Добавить товар</button>
+</div>
+
+<button class="cart-toggle" onclick="toggleCart()">Корзина</button>
+<div class="cart" id="cart">
+  <h2>🛒 Корзина</h2>
+  <div id="cartItems"></div>
+  <button onclick="openPaymentModal()">Оформить заказ</button>
+</div>
+
+<!-- Модальное окно оплаты -->
+<div id="paymentModal" class="modal">
+  <div class="modal-content">
+    <h3>Оплата заказа</h3>
+    <input type="text" id="cardNumber" placeholder="Номер карты (16 цифр)" maxlength="16" />
+    <input type="text" id="cardExpiry" placeholder="Срок действия (MM/ГГ)" maxlength="5" />
+    <input type="text" id="cardCVC" placeholder="CVC (3 цифры)" maxlength="3" />
+    <button onclick="processPayment()">Оплатить</button>
+    <button class="close-btn" onclick="closePaymentModal()">Отмена</button>
+  </div>
+</div>
+
+<script>
+  const users = {};
+  const userCarts = {};
+  let cart = [];
+  let cartVisible = false;
+  let currentUser = null;
+  const items = [
+    { name: "Меч Пламени", price: 350, stock: 0, image: "img/sword.jpg" },
+    { name: "Щит Защиты", price: 250, stock: 0, image: "img/shield.jpg" },
+    { name: "Лук Точности", price: 400, stock: 0, image: "img/bow.jpg" }
+  ];
+
+  function toggleCart() {
+    cartVisible = !cartVisible;
+    document.getElementById('cart').style.display = cartVisible ? 'block' : 'none';
+  }
+
+  function register() {
+    const name = document.getElementById('username').value.trim();
+    const pass = document.getElementById('password').value.trim();
+    if (!name || !pass) return alert('Заполните поля');
+    if (users[name]) return alert('Такой аккаунт уже существует');
+    users[name] = { password: pass };
+    alert('Регистрация успешна');
+  }
+
+  function login() {
+    const name = document.getElementById('username').value.trim();
+    const pass = document.getElementById('password').value.trim();
+    if (!users[name] || users[name].password !== pass) return alert('Неверные данные');
+    if (currentUser) userCarts[currentUser] = cart;
+    currentUser = name;
+    cart = userCarts[currentUser] || [];
+    document.getElementById('authPanel').style.display = 'none';
+    document.getElementById('logoutPanel').style.display = 'flex';
+    document.getElementById('greeting').innerText = `Здравствуйте, ${name}`;
+    renderItems();
+    updateCart();
+  }
+
+  function logout() {
+    if (currentUser) userCarts[currentUser] = cart;
+    currentUser = null;
+    cart = [];
+    document.getElementById('authPanel').style.display = 'flex';
+    document.getElementById('logoutPanel').style.display = 'none';
+    renderItems();
+    updateCart();
+  }
+
+  function addToCart(name, price) {
+    if (!currentUser) return alert("Войдите для покупок");
+    const itemData = items.find(item => item.name === name);
+
+    const inCart = cart.reduce((sum, item) => item.name === name ? sum + item.quantity : sum, 0);
+    if (inCart >= itemData.stock) {
+      return alert("Вы добавили максимальное количество этого товара");
+    }
+
+    const existing = cart.find(item => item.name === name);
+    if (existing) {
+      existing.quantity++;
+    } else {
+      cart.push({ name, price, quantity: 1 });
+    }
+
+    updateCart();
+  }
+
+  function removeFromCart(index) {
+    cart.splice(index, 1);
+    updateCart();
+  }
+
+  // Открыть окно оплаты
+  function openPaymentModal() {
+    if (!currentUser) return alert("Войдите для оформления заказа");
+    if (cart.length === 0) return alert("Корзина пуста");
+    document.getElementById('paymentModal').style.display = 'flex';
+  }
+
+  // Закрыть окно оплаты
+  function closePaymentModal() {
+    document.getElementById('paymentModal').style.display = 'none';
+  }
+
+  // Обработка оплаты
+  function processPayment() {
+    const cardNumber = document.getElementById('cardNumber').value.trim();
+    const cardExpiry = document.getElementById('cardExpiry').value.trim();
+    const cardCVC = document.getElementById('cardCVC').value.trim();
+
+    if (!/^\d{16}$/.test(cardNumber)) return alert("Введите корректный номер карты из 16 цифр");
+    if (!/^\d{2}\/\d{2}$/.test(cardExpiry)) return alert("Введите срок действия в формате MM/ГГ");
+    if (!/^\d{3}$/.test(cardCVC)) return alert("Введите CVC из 3 цифр");
+
+    // Проверка наличия товара
+    for (let i = 0; i < cart.length; i++) {
+      const itemInCart = cart[i];
+      const itemData = items.find(item => item.name === itemInCart.name);
+      if (itemInCart.quantity > itemData.stock) {
+        alert(`Недостаточно товара "${itemInCart.name}" на складе`);
+        return;
+      }
+    }
+
+    // Списание товара со склада
+    cart.forEach(cartItem => {
+      const itemData = items.find(item => item.name === cartItem.name);
+      itemData.stock -= cartItem.quantity;
+      if (itemData.stock < 0) itemData.stock = 0;
+    });
+
+    cart = [];
+    updateCart();
+    renderItems();
+    closePaymentModal();
+    alert("Спасибо за покупку!");
+  }
+
+  // Обновление корзины на странице
+  function updateCart() {
+    const container = document.getElementById('cartItems');
+    container.innerHTML = "";
+    if (cart.length === 0) {
+      container.innerHTML = "<p>Корзина пуста</p>";
+      return;
+    }
+    cart.forEach((item, i) => {
+      const div = document.createElement('div');
+      div.className = 'cart-item';
+      div.innerHTML = `
+        ${item.name} x${item.quantity} - ${item.price * item.quantity}$
+        <button onclick="removeFromCart(${i})">Удалить</button>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  // Отрисовка товаров
+  function renderItems() {
+    const container = document.getElementById('itemContainer');
+    container.innerHTML = "";
+
+    items.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      const stockText = item.stock > 0 ? `В наличии: ${item.stock}` : "Нет в наличии";
+
+      card.innerHTML = `
+        <img src="${item.image}" alt="${item.name}" />
+        <h3>${item.name}</h3>
+        <p>${stockText}</p>
+        <div class="price">${item.price}$</div>
+        <button class="btn" onclick="addToCart('${item.name}', ${item.price})" ${item.stock === 0 ? "disabled" : ""}>Купить</button>
+      `;
+
+      // Админские кнопки (если admin)
+      if (currentUser === 'admin') {
+        const adminDiv = document.createElement('div');
+        adminDiv.className = 'admin-controls';
+        adminDiv.innerHTML = `
+          <button onclick="restockItem('${item.name}')">Пополнить склад</button>
+          <button onclick="removeItem('${item.name}')">Удалить товар</button>
+        `;
+        card.appendChild(adminDiv);
+      }
+
+      container.appendChild(card);
+    });
+
+    // Если админ - показать форму добавления товара
+    if (currentUser === 'admin') {
+      document.getElementById('adminAddItem').style.display = 'block';
+    } else {
+      document.getElementById('adminAddItem').style.display = 'none';
+    }
+  }
+
+  function restockItem(name) {
+    const qty = prompt("Введите количество для пополнения склада:");
+    const numQty = Number(qty);
+    if (!numQty || numQty <= 0) return alert("Неверное количество");
+    const item = items.find(i => i.name === name);
+    item.stock += numQty;
+    renderItems();
+  }
+
+  function removeItem(name) {
+    const index = items.findIndex(i => i.name === name);
+    if (index === -1) return;
+    if (confirm(`Удалить товар "${name}"?`)) {
+      items.splice(index, 1);
+      renderItems();
+    }
+  }
+
+  // Добавить новый товар (для админа)
+  function addNewItem() {
+    const name = document.getElementById('newItemName').value.trim();
+    const price = Number(document.getElementById('newItemPrice').value);
+    const stock = Number(document.getElementById('newItemStock').value);
+    const image = document.getElementById('newItemImage').value.trim();
+
+    if (!name || !price || price <= 0 || !stock || stock < 0 || !image) {
+      return alert("Заполните все поля корректно");
+    }
+
+    if (items.find(i => i.name.toLowerCase() === name.toLowerCase())) {
+      return alert("Товар с таким названием уже существует");
+    }
+
+    items.push({ name, price, stock, image });
+    document.getElementById('newItemName').value = '';
+    document.getElementById('newItemPrice').value = '';
+    document.getElementById('newItemStock').value = '';
+    document.getElementById('newItemImage').value = '';
+    hidePreview();
+    renderItems();
+  }
+
+  // Показывать превью изображения по URL
+  function showPreview() {
+    const url = document.getElementById('newItemImage').value.trim();
+    const previewDiv = document.getElementById('imagePreview');
+    const img = previewDiv.querySelector('img');
+
+    if (url) {
+      img.src = url;
+      previewDiv.style.display = 'block';
+    } else {
+      hidePreview();
+    }
+  }
+  function hidePreview() {
+    const previewDiv = document.getElementById('imagePreview');
+    const img = previewDiv.querySelector('img');
+    img.src = '';
+    previewDiv.style.display = 'none';
+  }
+
+  renderItems();
+  updateCart();
+</script>
+
+</body>
+</html>
